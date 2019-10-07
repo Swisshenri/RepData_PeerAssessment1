@@ -1,25 +1,364 @@
 ---
-title: "Reproducible Research: Peer Assessment 1"
-output: 
-  html_document:
-    keep_md: true
+title: "ReprodResearchPeerAssignmt01"
+author: "Henri"
+date: "10/7/2019"
+output:
+  html_document: default
+  pdf_document: default
 ---
+name:  "PA1_template.Rmd"
+
+# Reproducible Research Peer Assigment 1
 
 
-## Loading and preprocessing the data
+load packages
+
+```{r loaddpacks, echo=FALSE}
+
+library(ggplot2)
+library(dplyr)
+```
+
+# 1. Loading and preprocessing the data
+
+ Show any code that is needed to
+
+  Load the data (i.e. 
+  read.csv()
+  Process/transform the data (if necessary) into a format suitable for your analysis
+
+
+### 1.1 Load the data
+First download the file to a directory within local computer
+Tell R_studio to set working directory to that dir
+Create working data tables to work with the data for each file 
+ 
+The character "~" is the local root directory by default
+
+```{r read}
+setwd("~/Documents/JOHN HOPKINS UNIV/MONTH 05 Reproducible Research/M05-Week02/Assignmt_Mo5_Week02")
+
+myDataFrame <- read.csv("activity.csv", header=TRUE, stringsAsFactors=FALSE)
+
+```
 
 
 
-## What is mean total number of steps taken per day?
+
+### 1.2 Process/transform the data (if necessary) into a format suitable for your analysis
+
+omit NA`s and change to date string
+
+```{r prepare}
+myDataFrame <- na.omit(myDataFrame) ## omit all records with NA´s 
+
+myDataFrame$date <- as.Date(myDataFrame$date, format="%Y-%m-%d") ## convert field to date
+
+head(myDataFrame)
+```
+
+check its contents
+
+```{r check1}
+
+head(myDataFrame)
+## check individual / unique items 
+id_uniq_act <- sapply(myDataFrame, unique) ## way of checking the contents 
+summary(id_uniq_act)
+
+```
+
+Now look at the values
+
+```{r check2}
+str(id_uniq_act)
+```
+
+There are two months ea. per day 61 days for months 10 and 11, 
+ 288 intervals (24 hours devided each by 12 intervals a 5 min ea.) and 618 steps
+ Intervals jump from 55 to 100, 155 to 200 and thus represent hours , 955 is 9 hours 55min
+
+# 2. What is the mean total number of steps taken per day?
+
+For this part of the assignment, you can ignore the missing values in the dataset.
+
+2.1 Calculate the total number of steps taken per day
+2.2  Make a histogram of the total number of steps taken each day
+2.3 Calculate and report the mean and median of the total number of steps taken per day
+For this part of the assignment, you can ignore the missing values in the dataset.
+
+Calculate the total number of steps taken per day
+If you do not understand the difference between a histogram and a barplot, research the difference between them. Make a histogram of the total number of steps taken each day
+Calculate and report the mean and median of the total number of steps taken per day
+
+### 2.1 Calculate the total number of steps taken per day
+
+Add all steps by day
+```{r sumStepsxday}
+sumStepsxday <- aggregate(steps ~ date, myDataFrame, sum, na.rm = TRUE)
+head(sumStepsxday,10)
+```
+
+### 2.2  Make a histogram of the total number of steps taken each day
+
+Histogram 
+```{r histsumStepsxday1 }
+hist(sumStepsxday$steps, main="Steps per day", xlab = "date", col="red", breaks=15)
+```
+
+### 2.3 Calculate and report the mean and median of the total number of steps taken per day
+
+calculate mean and median
+```{r calculatemean}
+
+    mean(sumStepsxday$steps) 
+    median(sumStepsxday$steps)
+
+```
+
+could have also done summary(sumStepsxday) shows these figures too
 
 
 
-## What is the average daily activity pattern?
+# 3. What is the average daily activity pattern?
+
+
+### 3.1 Make a time series plot of 5-min interval (x-axis) + avg # steps
+
+Make a time series plot (i.e. type = "l" type="l") 
+of the 5-minute interval (x-axis) and the average number of steps taken, averaged across all days (y-axis)
+Which 5-minute interval, on average across all the days in the dataset, contains the maximum number of steps?
 
 
 
-## Imputing missing values
+calculate the mean steps by interval
+
+create a data.frame to hold the number of steps aggregated by interval
+plot on type="l" line graph
+
+```{r sumStepsxinterval}
+sumStepsxinterval <- aggregate(steps ~ interval, myDataFrame, mean, na.rm = TRUE)
+
+plot(sumStepsxinterval, type="l", ylab = "Average across all Days", main = "Average number of steps taken", col = "blue")
+```
 
 
 
-## Are there differences in activity patterns between weekdays and weekends?
+### 3.2 Which 5-minute interval, on average across all the days in the dataset, contains the maximum number of steps?
+
+
+find out which is max interval from the summarized file
+```{r maxinterval}
+max_interval_steps <- which.max(sumStepsxinterval$steps)
+
+sumStepsxinterval[max_interval_steps,"interval"]
+```
+
+could also do sumStepsxinterval[max_interval_steps, 1]  "[  ,1]" same as [ ,"interval"]
+
+
+
+
+
+# 4. Imputing missing values
+
+Note that there are a number of days/intervals where there are missing values (coded as 
+NA
+NA). The presence of missing days may introduce bias into some calculations or summaries of the data.
+
+### 4.1 Calculate and report the total number of missing values in the dataset
+
+(i.e. the total number of rows with NA NAs)
+
+
+calculate the missing valuess
+
+```{r calcmissing}
+
+## reload the data.frame to include NA´s that were excluded in previous excercises
+
+myDataFrame <- read.csv("activity.csv", header=TRUE, stringsAsFactors=FALSE)
+
+
+totalna_s <- sum(is.na(myDataFrame))
+
+totalna_s
+```
+
+### 4.2 Devise a strategy for filling in all of the missing values in the dataset. 
+
+The strategy does not need to be sophisticated. For example, you could use the mean/median for that day, or the mean for that 5-minute interval, etc.
+
+Reload the data as is with NA's previously omitted the NA´s.
+
+The strategy will be to use the mean by ea interval and fill the NA`s with this mean.
+
+Use previous (see 3.1): "sumStepsxinterval" <- aggregate(steps ~ interval...) were summarized total steps per interval and create a newDataFrame merging the two files by interval. In other words put the mean of total steps by interval in ea interval.
+
+Than create a new data.frame merging the two by interval and check its contents
+
+```{r reloaddat}
+myDataFrame <- read.csv("activity.csv", header=TRUE, stringsAsFactors=FALSE)
+
+newDataFrame <- merge(x=myDataFrame, y=sumStepsxinterval, by="interval")
+
+head(newDataFrame)
+```
+
+
+### 4.3 Create a new dataset that is equal to the original dataset but with the missing data filled in.
+
+Within the new file check if field "Steps.x" (myDataFrame original) is NA,  than replace the NA values with the mean for that 5-minute interval stored now in "Steps.y"(sumStepsxinterval) if "$steps.x" is NA then put the value of "$Steps.y", else put the value of "$Steps.x" 
+
+Check and see (head) that effectively replaced the NA's with the interval mean stored in "Steps.y"
+
+```{r newDatfillna}
+newDataFrame$steps <- ifelse(is.na(newDataFrame$steps.x), newDataFrame$steps.y, newDataFrame$steps.x)
+head(newDataFrame)
+```
+
+     
+
+### 4.4 Make a histogram of the total number of steps taken each day 
+ and Calculate and report the mean and median total number of steps taken per day. Do these values differ from the estimates from the first part of the assignment? What is the impact of imputing missing data on the estimates of the total daily number of steps?
+
+Plot the two hist side by side with par function to compare
+
+Aggregate by day (== date) for original file as done in previous excercise 
+
+and Aggregate new file with NA's replaced
+
+
+```{r newStepsxday}
+sumStepsxday <- aggregate(steps ~ date, myDataFrame, sum, na.rm = TRUE)
+
+head(sumStepsxday,10)
+newStepsxday <- aggregate(steps ~ date, newDataFrame, sum, na.rm = TRUE)
+
+head(newStepsxday,10)
+```
+
+
+
+
+Plot using par 1,2 side by side one row to columns
+and reset panel par() to 1,1
+
+```{r plot2histside}
+par(mfrow=c(1,2))
+
+hist(sumStepsxday$steps, main="Steps per day discarding NA s", xlab = "date", col="red", breaks=15, ylim = c(0,25))  ## put the limit at 25 for easy graph comparison/read
+
+hist(newStepsxday$steps, main="SxD replacing NA´s with mean", xlab = "date", col="blue", breaks=15, ylim = c(0,25))
+
+par(mfrow=c(1,1)) ## reset the panel
+
+
+```
+
+
+
+
+test median of ea file
+
+```{r testmeans}
+mean(sumStepsxday$steps)  ## Original file mean
+median(sumStepsxday$steps) ## Original file median
+
+mean(newStepsxday$steps)   ## New file mean - NA´s converted to mean
+median(newStepsxday$steps)  ## New file median - NA´s converted to mean
+```
+
+
+The only difference is in the median because the median is a number that must exist.  In the original datafile the num 10766.19 does not exist. On the other hand, in the newly created datafile it does exist.(It was forced in).  This can be tested via the eg. the "length" rcomand to see if it effectively exists use round with 2 decimals because it maybe stored with more decimals.
+
+```{r testmeans2}
+
+length(which(round(sumStepsxday$steps, digits=2) == 10766.19)) ## Original
+
+length(which(round(newStepsxday$steps, digits=2) == 10766.19)) ## New
+
+```
+
+It can be seen that in the original file it does not exist,  whereas in the new file it does actually exist in 8 cases for this interval. (looks like 8 days had missing data thus where filled with NA´s and were replaced with the mean(interval) value)
+
+
+
+# 5. Are there differences in activity patterns between weekdays and weekends?
+
+For this part the  weekdays() function may be of some help here. Use the dataset with the filled-in missing values for this part.
+
+
+
+### 5.1 Create a new factor variable in the dataset with two levels 
+– “weekday” and “weekend” indicating whether a given date is a weekday or weekend day.
+
+Create a new file to hold all days of week and weekdays vs weekends. 
+
+```{r newweekfile}
+## first copy the data.frame
+
+daysDataFrame<- data.frame(myDataFrame)
+
+## (omit NA´s)
+daysDataFrame <- na.omit(daysDataFrame)
+
+## (convert to date field )
+daysDataFrame$date <- as.Date(daysDataFrame$date, format="%Y-%m-%d")
+
+## insert a new field with the name of the weekday
+daysDataFrame$days <- weekdays(daysDataFrame$date)
+
+## insert another field "Weekday" or "Weekend" depending on day
+
+daysDataFrame$wkday <- ifelse(daysDataFrame$days=="Saturday" | daysDataFrame$days =="Sunday", "Weekend", "Weekday")
+
+## check with length function to see if done Ok OPTIONAL
+## should match ok
+## length(which(daysDataFrame$days == "Sunday" | daysDataFrame$days == "Saturday"))
+## length(which(daysDataFrame$wkday == "Weekend" ))
+
+head(daysDataFrame)  ## to see how new file looks like
+
+```
+
+### 5.2 Make a panel plot containing a time series plot 
+
+(i.e.type="l") of the 5-minute interval (x-axis) and the average number of steps taken, averaged across all weekday days or weekend days (y-axis). See the README file in the GitHub repository to see an example of what this plot should look like using simulated data.
+
+plot()
+
+```{r lastplot}
+## first aggreagte steps by interval for file with weekdays 
+##     include +wkday to treat Weekends and Weekdays function mean
+
+sumStepsxintWkd<-aggregate(steps~interval+wkday,data=daysDataFrame,mean)
+
+## check it should be length 288 x 2 (one for Weekdays one for Weekends)
+str(sumStepsxintWkd)
+
+## used a predefined color for the line in the graph
+manual_color2 <- c("#56B4E9", "#009E73", "#F0E442") 
+
+
+## now plot with the summarized file by interval and weekday/end
+
+ggplot(sumStepsxintWkd , aes(x = interval, y = steps, color=`wkday`)) + 
+  geom_line() + 
+  labs(title = "Avg. # steps across Weekdays or Weekend ", x = "5 min interval 1500 means 15:00 hours", y = "# steps") + 
+  scale_color_manual(values = manual_color2) +  ## use color scheme stored in var "manual_color2"
+  facet_wrap(~`wkday` , ncol = 1, nrow=2)  ## two panels one in each row
+
+```
+
+#### "It looks like people do more steps in the weekends with the exception of around 9 am that peaks more on the weekdays!"
+
+
+OPTIONAL: Some other colors for the plot use some predefined manual 
+
+manual_color1 <- c("#00AFBB", "#E7B800", "#FC4E07") 
+manual_color2 <- c("#56B4E9", "#009E73", "#F0E442") 
+manual_color3 <- c("#E69F00", "#56B4E9", "#009E73") 
+manual_color4 <- c("#000000", "#E69F00", "#56B4E9") 
+manual_color5 <- c("#000000", "#00AFBB", "#56B4E9") 
+
